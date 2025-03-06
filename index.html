@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tương tác Giọng nói với AI Agent ElevenLabs</title>
+    <title>AI Tutor - METAVI JSC</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -30,7 +30,7 @@
         }
         
         .call-header {
-            background-color: #4F46E5;
+            background-color: #191970;
             color: white;
             padding: 15px 20px;
             text-align: center;
@@ -51,7 +51,7 @@
             width: 150px;
             height: 150px;
             border-radius: 50%;
-            background-color: #4F46E5;
+            background-color: #191970;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -170,7 +170,7 @@
             font-size: 1.3rem;
             margin-bottom: 20px;
             text-align: center;
-            color: #4F46E5;
+            color: #191970;
         }
         
         .setup-input {
@@ -183,7 +183,7 @@
         }
         
         .setup-button {
-            background-color: #4F46E5;
+            background-color: #191970;
             color: white;
             border: none;
             padding: 12px;
@@ -194,7 +194,7 @@
         }
         
         .transcript-user {
-            color: #4F46E5;
+            color: #191970;
             margin-bottom: 8px;
         }
         
@@ -214,7 +214,7 @@
             width: 5px;
             height: 20px;
             margin: 0 2px;
-            background-color: #4F46E5;
+            background-color: #191970;
             border-radius: 3px;
         }
         
@@ -238,12 +238,35 @@
                 height: 50px;
             }
         }
+
+        /* Thêm hiệu ứng hover cho các nút */
+        .setup-button:hover {
+            background-color: #0e0e56;
+        }
+
+        .control-button:hover {
+            transform: scale(1.05);
+            transition: transform 0.2s;
+        }
+
+        /* Thêm hiệu ứng phản hồi khi nhấn */
+        .setup-button:active, .control-button:active {
+            transform: scale(0.95);
+        }
+
+        /* Thêm lớp error message */
+        .error-message {
+            color: #F44336;
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
     <div class="call-container">
         <div class="call-header">
-            AI Agent ElevenLabs
+            AI Tutor - METAVI JSC
         </div>
         <div class="avatar-container">
             <div class="avatar" id="avatar">
@@ -291,202 +314,263 @@
     
     <div class="setup-container" id="setupContainer">
         <div class="setup-panel">
-            <div class="setup-title">Cài đặt ElevenLabs AI Agent</div>
+            <div class="setup-title">Cài đặt AI Tutor - METAVI JSC</div>
             <input type="password" class="setup-input" id="apiKeyInput" placeholder="Nhập API key của ElevenLabs">
             <input type="text" class="setup-input" id="voiceIdInput" placeholder="ID giọng nói (tùy chọn)">
-            <button class="setup-button" id="setupButton">Bắt đầu</button>
+            <button class="setup-button" id="setupButton" onclick="startSetup()">Bắt đầu</button>
+            <div id="errorMessage" class="error-message"></div>
         </div>
     </div>
 
     <script>
-        // Các phần tử DOM
-        const setupContainer = document.getElementById('setupContainer');
-        const apiKeyInput = document.getElementById('apiKeyInput');
-        const voiceIdInput = document.getElementById('voiceIdInput');
-        const setupButton = document.getElementById('setupButton');
-        const callButton = document.getElementById('callButton');
-        const endCallButton = document.getElementById('endCallButton');
-        const muteButton = document.getElementById('muteButton');
-        const statusText = document.getElementById('statusText');
-        const transcript = document.getElementById('transcript');
-        const avatar = document.getElementById('avatar');
-        const voiceWave = document.getElementById('voiceWave');
-        
-        // Biến trạng thái
-        let apiKey = localStorage.getItem('elevenLabsApiKey') || '';
-        let voiceId = localStorage.getItem('elevenLabsVoiceId') || 'default';
-        let isCallActive = false;
-        let isMuted = false;
-        let mediaRecorder;
-        let audioContext;
-        let audioStream;
-        let isAiSpeaking = false;
-        let audioQueue = [];
-        let isProcessing = false;
-        let recognition; // Biến cho Web Speech API
-        
-        // Kiểm tra xem API key đã được lưu chưa
-        if (apiKey) {
-            apiKeyInput.value = apiKey;
-        }
-        if (voiceId && voiceId !== 'default') {
-            voiceIdInput.value = voiceId;
-        }
-        
-        // Sự kiện lưu cài đặt
-        setupButton.addEventListener('click', () => {
-            apiKey = apiKeyInput.value.trim();
-            voiceId = voiceIdInput.value.trim() || 'default';
+        // Hiển thị lỗi nếu có
+        window.onerror = function(message, source, lineno, colno, error) {
+            const errorElement = document.getElementById('errorMessage');
+            if (errorElement) {
+                errorElement.textContent = `Lỗi: ${message}`;
+            }
+            console.error(`Lỗi: ${message} tại dòng ${lineno}`);
+            return true;
+        };
+
+        // Hàm thiết lập được gọi trực tiếp từ thuộc tính onclick của nút
+        function startSetup() {
+            console.log('Hàm startSetup() được gọi');
+            
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            const voiceIdInput = document.getElementById('voiceIdInput');
+            const setupContainer = document.getElementById('setupContainer');
+            const transcript = document.getElementById('transcript');
+            
+            const apiKey = apiKeyInput.value.trim();
+            const voiceId = voiceIdInput.value.trim() || 'default';
             
             if (apiKey) {
-                localStorage.setItem('elevenLabsApiKey', apiKey);
-                localStorage.setItem('elevenLabsVoiceId', voiceId);
+                try {
+                    localStorage.setItem('elevenLabsApiKey', apiKey);
+                    localStorage.setItem('elevenLabsVoiceId', voiceId);
+                    setupContainer.style.display = 'none';
+                    
+                    // Thêm tin nhắn chào
+                    const messageElement = document.createElement('div');
+                    messageElement.classList.add('transcript-ai');
+                    messageElement.textContent = 'AI: Chào bạn! Tôi là AI Tutor của METAVI JSC. Bạn có thể bắt đầu cuộc gọi bằng cách nhấn nút gọi.';
+                    transcript.appendChild(messageElement);
+                    
+                    // Cuộn xuống dưới cùng
+                    transcript.scrollTop = transcript.scrollHeight;
+                } catch (error) {
+                    console.error('Lỗi khi lưu thiết lập:', error);
+                    const errorElement = document.getElementById('errorMessage');
+                    if (errorElement) {
+                        errorElement.textContent = 'Không thể lưu thiết lập. Vui lòng thử lại.';
+                    }
+                }
+            } else {
+                const errorElement = document.getElementById('errorMessage');
+                if (errorElement) {
+                    errorElement.textContent = 'Vui lòng nhập API key của ElevenLabs';
+                } else {
+                    alert('Vui lòng nhập API key của ElevenLabs');
+                }
+            }
+        }
+
+        // Khởi tạo sau khi trang đã tải xong
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM đã tải xong');
+            
+            // Các phần tử DOM
+            const setupContainer = document.getElementById('setupContainer');
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            const voiceIdInput = document.getElementById('voiceIdInput');
+            const setupButton = document.getElementById('setupButton');
+            const callButton = document.getElementById('callButton');
+            const endCallButton = document.getElementById('endCallButton');
+            const muteButton = document.getElementById('muteButton');
+            const statusText = document.getElementById('statusText');
+            const transcript = document.getElementById('transcript');
+            const avatar = document.getElementById('avatar');
+            const voiceWave = document.getElementById('voiceWave');
+            
+            // Biến trạng thái
+            let apiKey = localStorage.getItem('elevenLabsApiKey') || '';
+            let voiceId = localStorage.getItem('elevenLabsVoiceId') || 'default';
+            let isCallActive = false;
+            let isMuted = false;
+            let mediaRecorder;
+            let audioContext;
+            let audioStream;
+            let isAiSpeaking = false;
+            let audioQueue = [];
+            let isProcessing = false;
+            let recognition; // Biến cho Web Speech API
+            
+            // Kiểm tra xem API key đã được lưu chưa
+            if (apiKey) {
+                apiKeyInput.value = apiKey;
                 setupContainer.style.display = 'none';
                 
-                addToTranscript('Chào bạn! Tôi là AI Agent của ElevenLabs. Bạn có thể bắt đầu cuộc gọi bằng cách nhấn nút gọi.', 'ai');
-            } else {
-                alert('Vui lòng nhập API key của ElevenLabs');
-            }
-        });
-        
-        // Sự kiện bắt đầu cuộc gọi
-        callButton.addEventListener('click', startCall);
-        
-        // Sự kiện kết thúc cuộc gọi
-        endCallButton.addEventListener('click', endCall);
-        
-        // Sự kiện tắt/bật micro
-        muteButton.addEventListener('click', toggleMute);
-        
-        // Hàm bắt đầu cuộc gọi
-        async function startCall() {
-            if (!apiKey) {
-                alert('Vui lòng nhập API key của ElevenLabs trước khi bắt đầu cuộc gọi.');
-                setupContainer.style.display = 'flex';
-                return;
+                // Thêm tin nhắn chào nếu API key đã có
+                const messageElement = document.createElement('div');
+                messageElement.classList.add('transcript-ai');
+                messageElement.textContent = 'AI: Chào bạn! Tôi là AI Tutor của METAVI JSC. Bạn có thể bắt đầu cuộc gọi bằng cách nhấn nút gọi.';
+                transcript.appendChild(messageElement);
             }
             
-            try {
-                // Kiểm tra quyền truy cập micro
-                audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            if (voiceId && voiceId !== 'default') {
+                voiceIdInput.value = voiceId;
+            }
+            
+            // Sự kiện bắt đầu cuộc gọi
+            callButton.addEventListener('click', startCall);
+            
+            // Sự kiện kết thúc cuộc gọi
+            endCallButton.addEventListener('click', endCall);
+            
+            // Sự kiện tắt/bật micro
+            muteButton.addEventListener('click', toggleMute);
+            
+            // Hàm bắt đầu cuộc gọi
+            async function startCall() {
+                if (!apiKey) {
+                    alert('Vui lòng nhập API key của ElevenLabs trước khi bắt đầu cuộc gọi.');
+                    setupContainer.style.display = 'flex';
+                    return;
+                }
                 
-                // Hiển thị nút kết thúc cuộc gọi và ẩn nút bắt đầu
-                callButton.style.display = 'none';
-                endCallButton.style.display = 'flex';
+                try {
+                    // Kiểm tra quyền truy cập micro
+                    audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    
+                    // Hiển thị nút kết thúc cuộc gọi và ẩn nút bắt đầu
+                    callButton.style.display = 'none';
+                    endCallButton.style.display = 'flex';
+                    
+                    // Cập nhật trạng thái
+                    isCallActive = true;
+                    statusText.textContent = 'Đang kết nối...';
+                    
+                    // Hiệu ứng gợn sóng cho avatar
+                    avatar.querySelector('.avatar-ripple').style.animation = 'ripple 2s infinite ease-out';
+                    
+                    // Khởi tạo bộ ghi âm
+                    setupAudioRecording();
+                    
+                    // Mô phỏng kết nối
+                    setTimeout(() => {
+                        statusText.textContent = 'Đang trò chuyện';
+                        voiceWave.classList.add('active');
+                        
+                        // Gửi tin nhắn chào từ AI
+                        const welcomeMessage = "Xin chào! Tôi là AI Tutor của METAVI JSC. Tôi đang nghe bạn đây. Bạn có thể nói chuyện với tôi ngay bây giờ.";
+                        addToTranscript(welcomeMessage, 'ai');
+                        simulateAiSpeaking(welcomeMessage);
+                    }, 1500);
+                    
+                    // Khởi tạo nhận diện giọng nói
+                    initSpeechRecognition();
+                    
+                } catch (error) {
+                    console.error('Lỗi khi truy cập micrô:', error);
+                    statusText.textContent = 'Không thể truy cập micrô';
+                    alert('Không thể truy cập micrô. Vui lòng kiểm tra quyền truy cập và thử lại.');
+                }
+            }
+            
+            // Hàm kết thúc cuộc gọi
+            function endCall() {
+                // Hiển thị nút bắt đầu và ẩn nút kết thúc
+                callButton.style.display = 'flex';
+                endCallButton.style.display = 'none';
                 
                 // Cập nhật trạng thái
-                isCallActive = true;
-                statusText.textContent = 'Đang kết nối...';
+                isCallActive = false;
+                statusText.textContent = 'Cuộc gọi đã kết thúc';
+                voiceWave.classList.remove('active');
                 
-                // Hiệu ứng gợn sóng cho avatar
-                avatar.querySelector('.avatar-ripple').style.animation = 'ripple 2s infinite ease-out';
+                // Dừng hiệu ứng gợn sóng
+                avatar.querySelector('.avatar-ripple').style.animation = 'none';
                 
-                // Khởi tạo bộ ghi âm
-                setupAudioRecording();
-                
-                // Mô phỏng kết nối
-                setTimeout(() => {
-                    statusText.textContent = 'Đang trò chuyện';
-                    voiceWave.classList.add('active');
-                    
-                    // Gửi tin nhắn chào từ AI
-                    const welcomeMessage = "Xin chào! Tôi là AI Agent của ElevenLabs. Tôi đang nghe bạn đây. Bạn có thể nói chuyện với tôi ngay bây giờ.";
-                    addToTranscript(welcomeMessage, 'ai');
-                    simulateAiSpeaking(welcomeMessage);
-                }, 1500);
-                
-                // Khởi tạo nhận diện giọng nói
-                initSpeechRecognition();
-                
-            } catch (error) {
-                console.error('Lỗi khi truy cập micrô:', error);
-                statusText.textContent = 'Không thể truy cập micrô';
-                alert('Không thể truy cập micrô. Vui lòng kiểm tra quyền truy cập và thử lại.');
-            }
-        }
-        
-        // Hàm kết thúc cuộc gọi
-        function endCall() {
-            // Hiển thị nút bắt đầu và ẩn nút kết thúc
-            callButton.style.display = 'flex';
-            endCallButton.style.display = 'none';
-            
-            // Cập nhật trạng thái
-            isCallActive = false;
-            statusText.textContent = 'Cuộc gọi đã kết thúc';
-            voiceWave.classList.remove('active');
-            
-            // Dừng hiệu ứng gợn sóng
-            avatar.querySelector('.avatar-ripple').style.animation = 'none';
-            
-            // Dừng ghi âm
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-            }
-            
-            // Dừng nhận diện giọng nói
-            if (recognition) {
-                recognition.stop();
-            }
-            
-            // Dừng phát âm thanh AI
-            stopAiSpeaking();
-            
-            // Đóng luồng âm thanh
-            if (audioStream) {
-                audioStream.getTracks().forEach(track => track.stop());
-            }
-            
-            addToTranscript('Cuộc gọi đã kết thúc. Cảm ơn bạn đã trò chuyện với tôi!', 'ai');
-        }
-        
-        // Hàm bật/tắt micrô
-        function toggleMute() {
-            if (!isCallActive) return;
-            
-            isMuted = !isMuted;
-            
-            // Cập nhật trạng thái của các track âm thanh
-            audioStream.getAudioTracks().forEach(track => {
-                track.enabled = !isMuted;
-            });
-            
-            // Thay đổi màu nút
-            muteButton.style.backgroundColor = isMuted ? '#F44336' : 'white';
-            
-            // Cập nhật trạng thái
-            if (isMuted) {
-                if (recognition) recognition.stop();
-                statusText.textContent = 'Micrô đã tắt';
-            } else {
-                if (recognition && isCallActive) recognition.start();
-                statusText.textContent = 'Đang trò chuyện';
-            }
-        }
-        
-        // Thiết lập ghi âm
-        function setupAudioRecording() {
-            if (!audioStream) return;
-            
-            mediaRecorder = new MediaRecorder(audioStream);
-            let audioChunks = [];
-            
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    audioChunks.push(event.data);
+                // Dừng ghi âm
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.stop();
                 }
-            };
+                
+                // Dừng nhận diện giọng nói
+                if (recognition) {
+                    recognition.stop();
+                }
+                
+                // Dừng phát âm thanh AI
+                stopAiSpeaking();
+                
+                // Đóng luồng âm thanh
+                if (audioStream) {
+                    audioStream.getTracks().forEach(track => track.stop());
+                }
+                
+                addToTranscript('Cuộc gọi đã kết thúc. Cảm ơn bạn đã trò chuyện với tôi!', 'ai');
+            }
             
-            mediaRecorder.onstop = async () => {
+            // Hàm bật/tắt micrô
+            function toggleMute() {
                 if (!isCallActive) return;
                 
-                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                audioChunks = [];
+                isMuted = !isMuted;
                 
-                // Ở đây bạn có thể gửi audioBlob tới ElevenLabs API
-                // processAudioWithElevenLabs(audioBlob);
+                // Cập nhật trạng thái của các track âm thanh
+                audioStream.getAudioTracks().forEach(track => {
+                    track.enabled = !isMuted;
+                });
                 
-                // Bắt đầu ghi âm lại
+                // Thay đổi màu nút
+                muteButton.style.backgroundColor = isMuted ? '#F44336' : 'white';
+                
+                // Cập nhật trạng thái
+                if (isMuted) {
+                    if (recognition) recognition.stop();
+                    statusText.textContent = 'Micrô đã tắt';
+                } else {
+                    if (recognition && isCallActive) recognition.start();
+                    statusText.textContent = 'Đang trò chuyện';
+                }
+            }
+            
+            // Thiết lập ghi âm
+            function setupAudioRecording() {
+                if (!audioStream) return;
+                
+                mediaRecorder = new MediaRecorder(audioStream);
+                let audioChunks = [];
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+                
+                mediaRecorder.onstop = async () => {
+                    if (!isCallActive) return;
+                    
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    audioChunks = [];
+                    
+                    // Ở đây bạn có thể gửi audioBlob tới ElevenLabs API
+                    // processAudioWithElevenLabs(audioBlob);
+                    
+                    // Bắt đầu ghi âm lại
+                    if (isCallActive && !isMuted) {
+                        mediaRecorder.start();
+                        setTimeout(() => {
+                            if (mediaRecorder.state === 'recording') {
+                                mediaRecorder.stop();
+                            }
+                        }, 5000); // Ghi âm trong 5 giây
+                    }
+                };
+                
+                // Bắt đầu ghi âm
                 if (isCallActive && !isMuted) {
                     mediaRecorder.start();
                     setTimeout(() => {
@@ -495,189 +579,187 @@
                         }
                     }, 5000); // Ghi âm trong 5 giây
                 }
-            };
-            
-            // Bắt đầu ghi âm
-            if (isCallActive && !isMuted) {
-                mediaRecorder.start();
-                setTimeout(() => {
-                    if (mediaRecorder.state === 'recording') {
-                        mediaRecorder.stop();
-                    }
-                }, 5000); // Ghi âm trong 5 giây
-            }
-        }
-        
-        // Hàm khởi tạo nhận diện giọng nói
-        function initSpeechRecognition() {
-            // Kiểm tra trình duyệt có hỗ trợ Web Speech API không
-            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                console.error('Trình duyệt không hỗ trợ nhận diện giọng nói.');
-                return;
             }
             
-            // Khởi tạo đối tượng nhận diện giọng nói
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.lang = 'vi-VN';
-            recognition.continuous = true;
-            recognition.interimResults = false;
-            
-            recognition.onstart = function() {
-                console.log('Bắt đầu nhận diện giọng nói');
-            };
-            
-            recognition.onresult = function(event) {
-                const last = event.results.length - 1;
-                const text = event.results[last][0].transcript;
-                
-                // Xử lý văn bản nhận diện được
-                if (text.trim()) {
-                    addToTranscript(text, 'user');
-                    
-                    // Tạm dừng nhận diện khi đang xử lý
-                    recognition.stop();
-                    
-                    // Gửi văn bản tới ElevenLabs API và nhận phản hồi
-                    processUserSpeech(text);
+            // Hàm khởi tạo nhận diện giọng nói
+            function initSpeechRecognition() {
+                // Kiểm tra trình duyệt có hỗ trợ Web Speech API không
+                if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                    console.error('Trình duyệt không hỗ trợ nhận diện giọng nói.');
+                    return;
                 }
-            };
-            
-            recognition.onerror = function(event) {
-                console.error('Lỗi nhận diện giọng nói:', event.error);
                 
-                // Khởi động lại nếu gặp lỗi
-                if (isCallActive && !isMuted) {
-                    setTimeout(() => {
+                // Khởi tạo đối tượng nhận diện giọng nói
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.lang = 'vi-VN';
+                recognition.continuous = true;
+                recognition.interimResults = false;
+                
+                recognition.onstart = function() {
+                    console.log('Bắt đầu nhận diện giọng nói');
+                };
+                
+                recognition.onresult = function(event) {
+                    const last = event.results.length - 1;
+                    const text = event.results[last][0].transcript;
+                    
+                    // Xử lý văn bản nhận diện được
+                    if (text.trim()) {
+                        addToTranscript(text, 'user');
+                        
+                        // Tạm dừng nhận diện khi đang xử lý
+                        recognition.stop();
+                        
+                        // Gửi văn bản tới ElevenLabs API và nhận phản hồi
+                        processUserSpeech(text);
+                    }
+                };
+                
+                recognition.onerror = function(event) {
+                    console.error('Lỗi nhận diện giọng nói:', event.error);
+                    
+                    // Khởi động lại nếu gặp lỗi
+                    if (isCallActive && !isMuted) {
+                        setTimeout(() => {
+                            try {
+                                recognition.start();
+                            } catch (e) {
+                                console.error('Không thể khởi động lại nhận diện giọng nói:', e);
+                            }
+                        }, 1000);
+                    }
+                };
+                
+                recognition.onend = function() {
+                    console.log('Kết thúc nhận diện giọng nói');
+                    
+                    // Khởi động lại nếu cuộc gọi vẫn đang hoạt động
+                    if (isCallActive && !isMuted && !isAiSpeaking) {
                         try {
                             recognition.start();
                         } catch (e) {
                             console.error('Không thể khởi động lại nhận diện giọng nói:', e);
                         }
-                    }, 1000);
-                }
-            };
-            
-            recognition.onend = function() {
-                console.log('Kết thúc nhận diện giọng nói');
-                
-                // Khởi động lại nếu cuộc gọi vẫn đang hoạt động
-                if (isCallActive && !isMuted && !isAiSpeaking) {
-                    try {
-                        recognition.start();
-                    } catch (e) {
-                        console.error('Không thể khởi động lại nhận diện giọng nói:', e);
                     }
-                }
-            };
-            
-            // Bắt đầu nhận diện
-            if (isCallActive && !isMuted) {
-                try {
-                    recognition.start();
-                } catch (e) {
-                    console.error('Không thể bắt đầu nhận diện giọng nói:', e);
-                }
-            }
-        }
-        
-        // Xử lý lời nói của người dùng
-        async function processUserSpeech(text) {
-            // Tránh xử lý trùng lặp
-            if (isProcessing) return;
-            isProcessing = true;
-            
-            try {
-                // Giả lập gửi văn bản tới API ElevenLabs
-                // Trong ứng dụng thực tế, bạn sẽ gửi yêu cầu tới API ElevenLabs ở đây
+                };
                 
-                setTimeout(() => {
-                    // Mô phỏng phản hồi từ AI
-                    let aiResponse;
-                    
-                    if (text.toLowerCase().includes('xin chào') || text.toLowerCase().includes('chào')) {
-                        aiResponse = "Xin chào! Rất vui được trò chuyện với bạn. Tôi là AI Agent của ElevenLabs. Tôi có thể giúp gì cho bạn hôm nay?";
-                    } else if (text.toLowerCase().includes('thời tiết')) {
-                        aiResponse = "Rất tiếc, tôi không có khả năng truy cập thông tin thời tiết thời gian thực. Bạn có thể hỏi tôi về điều gì khác không?";
-                    } else if (text.toLowerCase().includes('giới thiệu') || text.toLowerCase().includes('bạn là ai')) {
-                        aiResponse = "Tôi là một AI Agent được phát triển bởi ElevenLabs, một công ty chuyên về công nghệ tổng hợp giọng nói AI. Tôi có thể trò chuyện với bạn bằng giọng nói tự nhiên và trả lời các câu hỏi của bạn.";
-                    } else {
-                        aiResponse = "Tôi đã nghe thấy bạn nói: '" + text + "'. Đây là một ứng dụng demo, nên tôi chỉ có thể đưa ra các phản hồi có sẵn. Trong ứng dụng thực tế, tôi sẽ kết nối với ElevenLabs API để cung cấp các phản hồi phù hợp hơn.";
-                    }
-                    
-                    // Thêm phản hồi vào bảng ghi
-                    addToTranscript(aiResponse, 'ai');
-                    
-                    // Mô phỏng AI nói
-                    simulateAiSpeaking(aiResponse);
-                    
-                    // Kết thúc xử lý
-                    isProcessing = false;
-                    
-                }, 1000);
-                
-            } catch (error) {
-                console.error('Lỗi khi xử lý lời nói:', error);
-                isProcessing = false;
-                
-                // Khởi động lại nhận diện
-                if (isCallActive && !isMuted && !isAiSpeaking) {
-                    try {
-                        recognition.start();
-                    } catch (e) {
-                        console.error('Không thể khởi động lại nhận diện giọng nói:', e);
-                    }
-                }
-            }
-        }
-        
-        // Hàm mô phỏng AI đang nói
-        function simulateAiSpeaking(text) {
-            isAiSpeaking = true;
-            voiceWave.classList.add('active');
-            
-            // Tính thời gian nói dựa trên độ dài văn bản
-            const speakingTime = Math.max(2000, text.length * 80);
-            
-            // Tạm dừng nhận diện trong khi AI đang nói
-            if (recognition) {
-                recognition.stop();
-            }
-            
-            // Mô phỏng phát âm thanh
-            setTimeout(() => {
-                isAiSpeaking = false;
-                voiceWave.classList.remove('active');
-                
-                // Khởi động lại nhận diện sau khi AI nói xong
+                // Bắt đầu nhận diện
                 if (isCallActive && !isMuted) {
                     try {
                         recognition.start();
                     } catch (e) {
-                        console.error('Không thể khởi động lại nhận diện giọng nói:', e);
+                        console.error('Không thể bắt đầu nhận diện giọng nói:', e);
                     }
                 }
-            }, speakingTime);
+            }
             
-            // Trong ứng dụng thực tế, đây là nơi bạn sẽ phát audio từ ElevenLabs API
-            // playElevenLabsAudio(audioUrl);
-        }
-        
-        // Hàm dừng AI nói
-        function stopAiSpeaking() {
-            isAiSpeaking = false;
-            voiceWave.classList.remove('active');
+            // Xử lý lời nói của người dùng
+            async function processUserSpeech(text) {
+                // Tránh xử lý trùng lặp
+                if (isProcessing) return;
+                isProcessing = true;
+                
+                try {
+                    // Giả lập gửi văn bản tới API ElevenLabs
+                    // Trong ứng dụng thực tế, bạn sẽ gửi yêu cầu tới API ElevenLabs ở đây
+                    
+                    setTimeout(() => {
+                        // Mô phỏng phản hồi từ AI
+                        let aiResponse;
+                        
+                        if (text.toLowerCase().includes('xin chào') || text.toLowerCase().includes('chào')) {
+                            aiResponse = "Xin chào! Rất vui được trò chuyện với bạn. Tôi là AI Tutor của METAVI JSC. Tôi có thể giúp gì cho bạn hôm nay?";
+                        } else if (text.toLowerCase().includes('thời tiết')) {
+                            aiResponse = "Rất tiếc, tôi không có khả năng truy cập thông tin thời tiết thời gian thực. Bạn có thể hỏi tôi về điều gì khác không?";
+                        } else if (text.toLowerCase().includes('giới thiệu') || text.toLowerCase().includes('bạn là ai')) {
+                            aiResponse = "Tôi là một AI Tutor được phát triển bởi METAVI JSC, một công ty chuyên về giáo dục công nghệ và AI. Tôi có thể trò chuyện với bạn bằng giọng nói tự nhiên, trả lời các câu hỏi và hỗ trợ bạn trong quá trình học tập.";
+                        } else if (text.toLowerCase().includes('học tiếng anh') || text.toLowerCase().includes('tiếng anh')) {
+                            aiResponse = "Tôi có thể giúp bạn học tiếng Anh! Bạn muốn tập trung vào kỹ năng nào: nghe, nói, đọc, viết? Hoặc bạn cần giúp đỡ với ngữ pháp, từ vựng hay phát âm?";
+                        } else if (text.toLowerCase().includes('cảm ơn')) {
+                            aiResponse = "Không có gì! Tôi luôn sẵn sàng giúp đỡ bạn. Còn câu hỏi hay chủ đề nào khác bạn muốn thảo luận không?";
+                        } else {
+                            aiResponse = "Tôi đã nghe thấy bạn nói: '" + text + "'. Đây là một ứng dụng demo, nên tôi chỉ có thể đưa ra các phản hồi có sẵn. Trong ứng dụng thực tế, tôi sẽ kết nối với AI của METAVI JSC để cung cấp các phản hồi phù hợp và hỗ trợ bạn học tập hiệu quả hơn.";
+                        }
+                        
+                        // Thêm phản hồi vào bảng ghi
+                        addToTranscript(aiResponse, 'ai');
+                        
+                        // Mô phỏng AI nói
+                        simulateAiSpeaking(aiResponse);
+                        
+                        // Kết thúc xử lý
+                        isProcessing = false;
+                        
+                    }, 1000);
+                    
+                } catch (error) {
+                    console.error('Lỗi khi xử lý lời nói:', error);
+                    isProcessing = false;
+                    
+                    // Khởi động lại nhận diện
+                    if (isCallActive && !isMuted && !isAiSpeaking) {
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            console.error('Không thể khởi động lại nhận diện giọng nói:', e);
+                        }
+                    }
+                }
+            }
             
-            // Dừng phát âm thanh
-            // stopPlayingAudio();
-        }
-        
-        // Hàm thêm nội dung vào bảng ghi hội thoại
-        function addToTranscript(text, speaker) {
-            const messageElement = document.createElement('div');
-            messageElement.classList.add(`transcript-${speaker}`);
-            messageElement.textContent = speaker === 'user' ? `Bạn: ${text}` : `AI: ${text}`;
-            transcript.appendChild(messageElement);
+            // Hàm mô phỏng AI đang nói
+            function simulateAiSpeaking(text) {
+                isAiSpeaking = true;
+                voiceWave.classList.add('active');
+                
+                // Tính thời gian nói dựa trên độ dài văn bản
+                const speakingTime = Math.max(2000, text.length * 80);
+                
+                // Tạm dừng nhận diện trong khi AI đang nói
+                if (recognition) {
+                    recognition.stop();
+                }
+                
+                // Mô phỏng phát âm thanh
+                setTimeout(() => {
+                    isAiSpeaking = false;
+                    voiceWave.classList.remove('active');
+                    
+                    // Khởi động lại nhận diện sau khi AI nói xong
+                    if (isCallActive && !isMuted) {
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            console.error('Không thể khởi động lại nhận diện giọng nói:', e);
+                        }
+                    }
+                }, speakingTime);
+                
+                // Trong ứng dụng thực tế, đây là nơi bạn sẽ phát audio từ ElevenLabs API
+                // playElevenLabsAudio(audioUrl);
+            }
             
-            // Cuộn xuống dưới cùng
-            transcript.scrollTop = transcript.
+            // Hàm dừng AI nói
+            function stopAiSpeaking() {
+                isAiSpeaking = false;
+                voiceWave.classList.remove('active');
+                
+                // Dừng phát âm thanh
+                // stopPlayingAudio();
+            }
+            
+            // Hàm thêm nội dung vào bảng ghi hội thoại
+            function addToTranscript(text, speaker) {
+                const messageElement = document.createElement('div');
+                messageElement.classList.add(`transcript-${speaker}`);
+                messageElement.textContent = speaker === 'user' ? `Bạn: ${text}` : `AI: ${text}`;
+                transcript.appendChild(messageElement);
+                
+                // Cuộn xuống dưới cùng
+                transcript.scrollTop = transcript.scrollHeight;
+            }
+        });
+    </script>
+</body>
+</html>
